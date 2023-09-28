@@ -1,15 +1,11 @@
-
-
 import requests
 from bs4 import BeautifulSoup
-import json, csv
+import json
 from datetime import datetime, timezone
 
 from common import _L, DEBUG, DIRNAME, INFO
 # from typing import (Callable, ContextManager, Dict, Generic, Iterable,
 #                     Iterator, Optional, TypeVar)
-
-
 
 webpages= [{ 
         "game": "Borderlands 2", 
@@ -187,7 +183,12 @@ def main(args):
         #print(json.dumps(webpage,indent=2, default=str))
         code_tables = scrape_codes(webpage)
         codes = generateAutoshiftJSON(code_tables)
-        print(codes)
+        #print(codes)
+    
+    with open('shiftcodes.json', 'w', newline='') as fp:
+        json.dump(codes, fp, indent=2, ensure_ascii=False)
+        #json_string = json.dumps(codes,indent=2, default=str)
+        #fp.write(json_string)
 
 if __name__ == '__main__':
 
