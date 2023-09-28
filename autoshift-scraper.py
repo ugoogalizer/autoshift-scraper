@@ -58,16 +58,22 @@ def cleanse_codes(codes):
     return clean_codes
 
 def scrape_codes(webpage):
+    _L.info("Requesting webpage: " + webpage.get("sourceURL"))
     r = requests.get(webpage.get("sourceURL"))
     #record the time we scraped the URL 
     scrapedDateAndTime = datetime.now(timezone.utc)
-    print(scrapedDateAndTime)
+    _L.info(" Collected at: " + str(scrapedDateAndTime))
     # print(r.content)
 
     soup = BeautifulSoup(r.content, 'html.parser') # If this line causes an error, run 'pip install html5lib' or install html5lib
     # print(soup.prettify())
 
+    # Extract all the `figure` tags from the HTML noting the following XPATH was originally expected
+    #    /html/body/div[2]/div/div[4]/div[1]/div/div/article/div[5]/figure[2]/table/
     figures = soup.find_all("figure")
+
+    _L.info (" Expecting tables: " + str(len(webpage.get("platform_ordered_tables"))))
+    _L.info (" Collected tables: " + str(len(figures)))
 
     #headers = []
     code_tables = []
@@ -115,21 +121,45 @@ def scrape_codes(webpage):
     return code_tables
 
 
-def generateAutoshiftJSON(code_tables): 
+# Restructure the normalised dictionary to the denormalised structure autoshift expects
+def generateAutoshiftJSON(website_code_tables): 
     autoshiftcodes = []
-    for code_table in code_tables:
-        for code in code_table.get("codes"):
-            autoshiftcodes.append({
-                "code": code.get("code"),
-                "type": "shift",
-                "game": code_table.get("game"),
-                "platform": code_table.get("platform"),
-                "reward": code.get("reward"),
-                "archived": code_table.get("archived"),
-                "expires": code.get("expires"),
-                "link": code_table.get("sourceURL")
+    for code_tables in website_code_tables:
+        for code_table in code_tables:
+            for code in code_table.get("codes"):
+                autoshiftcodes.append({
+                    "code": code.get("code"),
+                    "type": "shift",
+                    "game": code_table.get("game"),
+                    "platform": code_table.get("platform"),
+                    "reward": code.get("reward"),
+                    "archived": code_table.get("archived"),
+                    "expires": code.get("expires"),
+                    "link": code_table.get("sourceURL")
             })
-    return json.dumps(autoshiftcodes,indent=2, default=str)
+
+    # Sort the keys
+    # TODO
+
+    # Add the metadata section: 
+    generatedDateAndTime = datetime.now(timezone.utc)
+    metadata = {
+            "version": "0.1",
+            "description": "GitHub Alternate Source for Shift Codes",
+            "attribution": "Data provided by https://mentalmars.com",
+            "permalink": "https://raw.githubusercontent.com/ugoogalizer/autoshift/master/shiftcodes.json",
+            "generated": {
+                "human": generatedDateAndTime
+            }
+        }
+    
+    autoshift = [{
+        "meta" : metadata,
+        "codes" : autoshiftcodes
+    }]
+    
+    return autoshift   
+    #return json.dumps(autoshiftcodes,indent=2, default=str)
 
 def setup_argparser():
     import argparse
@@ -137,35 +167,7 @@ def setup_argparser():
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-u", "--user",
-                        default=None,
-                        help=("User login you want to use "
-                              "(optional. You will be prompted to enter your "
-                              " credentials if you didn't specify them here)"))
-    parser.add_argument("-p", "--pass",
-                        help=("Password for your login. "
-                              "(optional. You will be prompted to enter your "
-                              " credentials if you didn't specify them here)"))
-    parser.add_argument("--golden",
-                        action="store_true",
-                        help="Only redeem golden keys")
-    parser.add_argument("--non-golden", dest="non_golden",
-                        action="store_true",
-                        help="Only redeem non-golden keys")
-    # parser.add_argument("--games",
-    #                     type=str, required=True,
-    #                     choices=games, nargs="+",
-    #                     help=("Games you want to query SHiFT keys for"))
-    # parser.add_argument("--platforms",
-    #                     type=str, required=True,
-    #                     choices=platforms, nargs="+",
-    #                     help=("Platforms you want to query SHiFT keys for"))
-    parser.add_argument("--limit",
-                        type=int, default=200,
-                        help=textwrap.dedent("""\
-                        Max number of golden Keys you want to redeem.
-                        (default 200)
-                        NOTE: You can only have 255 keys at any given time!""")) # noqa
+    # TODO add github repo and key here to publish to...
     parser.add_argument("--schedule",
                         type=float, const=2, nargs="?",
                         help="Keep checking for keys and redeeming every hour")
@@ -179,16 +181,23 @@ def setup_argparser():
 def main(args):
     #print(json.dumps(webpages,indent=2, default=str))
     codes = []
+    code_tables = []
+
+    #Scrape the source webpage into a normalised Dictionary
     for webpage in webpages:
-        #print(json.dumps(webpage,indent=2, default=str))
-        code_tables = scrape_codes(webpage)
-        codes = generateAutoshiftJSON(code_tables)
+        code_tables.append(scrape_codes(webpage))
+        
         #print(codes)
-    
-    with open('shiftcodes.json', 'w', newline='') as fp:
-        json.dump(codes, fp, indent=2, ensure_ascii=False)
-        #json_string = json.dumps(codes,indent=2, default=str)
-        #fp.write(json_string)
+
+    # Convert the normalised Dictionary into the denormalised autoshift structure
+    codes = generateAutoshiftJSON(code_tables)
+
+    # Write out the file
+    with open('shiftcodes.json', 'w') as write_file:
+        json.dump(codes, write_file, indent=2, default=str)
+
+    # Commit and push to github
+    # TODO
 
 if __name__ == '__main__':
 
