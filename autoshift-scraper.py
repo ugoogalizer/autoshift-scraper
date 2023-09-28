@@ -8,6 +8,13 @@ from common import _L, DEBUG, DIRNAME, INFO
 #                     Iterator, Optional, TypeVar)
 
 webpages= [{ 
+        "game": "Borderlands: Game of the Year Edition", 
+        "sourceURL": "https://mentalmars.com/game-news/borderlands-golden-keys/",
+        "platform_ordered_tables": [
+                "universal",
+                "universal"
+            ]
+    },{ 
         "game": "Borderlands 2", 
         "sourceURL": "https://mentalmars.com/game-news/borderlands-2-golden-keys/",
         "platform_ordered_tables": [
@@ -17,6 +24,41 @@ webpages= [{
                 "xbox",
                 "psn",
                 "universal",
+                "discard"
+            ]
+    },{ 
+        "game": "Borderlands 3", 
+        "sourceURL": "https://mentalmars.com/game-news/borderlands-3-golden-keys/",
+        "platform_ordered_tables": [
+                "universal",
+                "discard",
+                "universal",
+                "universal",
+                "universal",
+                "discard",
+                "discard",
+                "discard",
+                "discard"
+            ]
+    },{ 
+        "game": "Borderlands The Pre-Sequel", 
+        "sourceURL": "https://mentalmars.com/game-news/bltps-golden-keys/",
+        "platform_ordered_tables": [
+                "universal",
+                "universal",
+                "pc",
+                "psn",
+                "xbox",
+                "discard",
+                "discard",
+                "discard",
+                "discard",
+                "discard",
+                "discard",
+                "discard",
+                "discard",
+                "discard",
+                "discard",
                 "discard"
             ]
     }]
@@ -29,6 +71,7 @@ def remap_dict_keys(dict_keys):
     # Here in case of variation in table headings
     heading_map = {
         'SHiFT Code': 'code',
+        'PC SHiFT Code': 'code',
         'Expires': 'expires', 
         'Reward': 'reward'
     }
@@ -58,7 +101,7 @@ def cleanse_codes(codes):
     return clean_codes
 
 def scrape_codes(webpage):
-    _L.info("Requesting webpage: " + webpage.get("sourceURL"))
+    _L.info("Requesting webpage for " + webpage.get("game") + ": " + webpage.get("sourceURL"))
     r = requests.get(webpage.get("sourceURL"))
     #record the time we scraped the URL 
     scrapedDateAndTime = datetime.now(timezone.utc)
@@ -80,6 +123,13 @@ def scrape_codes(webpage):
 
     table_count=0
     for figure in figures: 
+        _L.info (" Parsing for table #" + str(table_count) + " - " + webpage.get("platform_ordered_tables")[table_count])
+
+        #Don't parse any tables  marked to  discard
+        if webpage.get("platform_ordered_tables")[table_count] == "discard":
+            table_count+=1
+            continue
+
         table_html = figure.find(lambda tag: tag.name=='table') 
 
         table_header = []
@@ -98,17 +148,16 @@ def scrape_codes(webpage):
             # Skip to the next table iteration
             continue
 
-        # Only keep any tables not marked to  discard
-        if webpage.get("platform_ordered_tables")[table_count] != "discard":
-            # Clean the results up 
-            code_table = cleanse_codes(code_table)
-            code_tables.append({
-                "game" : webpage.get("game"), 
-                "platform" : webpage.get("platform_ordered_tables")[table_count], 
-                "sourceURL" : webpage.get("sourceURL"),
-                "archived" : scrapedDateAndTime,
-                "codes" : code_table
-            })
+    
+        # Clean the results up 
+        code_table = cleanse_codes(code_table)
+        code_tables.append({
+            "game" : webpage.get("game"), 
+            "platform" : webpage.get("platform_ordered_tables")[table_count], 
+            "sourceURL" : webpage.get("sourceURL"),
+            "archived" : scrapedDateAndTime,
+            "codes" : code_table
+        })
 
         #print("Table Number: " + str(table_count))
         # print("HEADER CLEAN: " + str(table_count))

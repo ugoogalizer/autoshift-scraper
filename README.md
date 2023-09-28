@@ -11,6 +11,7 @@ This has been setup with the intent that other webpages could be scraped. The  P
 TODO List: 
 - [x] Scrape mentalmars
 - [x] output into a autoshift compatible json file format
+- [ ] change to find `table` tags in `figure` tags to reduce noise in webpage
 - [ ] publish somewhere for consumption (github repo?) retaining sort order to make diffs easier
 - [ ] dockerise and schedule
 
