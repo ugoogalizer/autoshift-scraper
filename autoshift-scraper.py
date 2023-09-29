@@ -22,7 +22,7 @@ webpages= [{
                 "universal",
                 "pc",
                 "xbox",
-                "psn",
+                "Playstation",
                 "universal",
                 "discard"
             ]
@@ -47,7 +47,7 @@ webpages= [{
                 "universal",
                 "universal",
                 "pc",
-                "psn",
+                "Playstation",
                 "xbox",
                 "discard",
                 "discard",
@@ -61,9 +61,16 @@ webpages= [{
                 "discard",
                 "discard"
             ]
+    },{ 
+        "game": "Tiny Tina's Wonderlands", 
+        "sourceURL": "https://mentalmars.com/game-news/tiny-tinas-wonderlands-shift-codes/",
+        "platform_ordered_tables": [
+                "universal",
+                "universal"
+            ]
     }]
 
-#BL2 = ["universal-expirable", "universal-unexpirable","pc","xbox","psn","universal-event"]
+#BL2 = ["universal-expirable", "universal-unexpirable","pc","xbox","Playstation","universal-event"]
 
 
 def remap_dict_keys(dict_keys):
