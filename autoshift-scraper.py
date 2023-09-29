@@ -183,16 +183,38 @@ def generateAutoshiftJSON(website_code_tables):
     for code_tables in website_code_tables:
         for code_table in code_tables:
             for code in code_table.get("codes"):
-                autoshiftcodes.append({
-                    "code": code.get("code"),
-                    "type": "shift",
-                    "game": code_table.get("game"),
-                    "platform": code_table.get("platform"),
-                    "reward": code.get("reward"),
-                    "archived": code_table.get("archived"),
-                    "expires": code.get("expires"),
-                    "link": code_table.get("sourceURL")
-            })
+                if code_table.get("platform") == "pc":
+                    autoshiftcodes.append({
+                        "code": code.get("code"),
+                        "type": "shift",
+                        "game": code_table.get("game"),
+                        "platform": "steam",
+                        "reward": code.get("reward"),
+                        "archived": code_table.get("archived"),
+                        "expires": code.get("expires"),
+                        "link": code_table.get("sourceURL")
+                    })
+                    autoshiftcodes.append({
+                        "code": code.get("code"),
+                        "type": "shift",
+                        "game": code_table.get("game"),
+                        "platform": "epic",
+                        "reward": code.get("reward"),
+                        "archived": code_table.get("archived"),
+                        "expires": code.get("expires"),
+                        "link": code_table.get("sourceURL")
+                    })
+                else:
+                    autoshiftcodes.append({
+                        "code": code.get("code"),
+                        "type": "shift",
+                        "game": code_table.get("game"),
+                        "platform": code_table.get("platform"),
+                        "reward": code.get("reward"),
+                        "archived": code_table.get("archived"),
+                        "expires": code.get("expires"),
+                        "link": code_table.get("sourceURL")
+                    })
 
     # Sort the keys
     # TODO
