@@ -128,3 +128,8 @@ notebooks/
 
 # vscode
 *.code-workspace
+
+# autoshift specifics
+# data
+*new.json
+*old.json

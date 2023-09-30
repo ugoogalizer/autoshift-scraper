@@ -13,12 +13,11 @@ TODO List:
 - [x] output into a autoshift compatible json file format
 - [ ] change to find `table` tags in `figure` tags to reduce noise in webpage
 - [x] publish to GitHub [here](https://raw.githubusercontent.com/ugoogalizer/autoshift-codes/main/shiftcodes.json)
-- [ ] dockerise and schedule
-
+- [x] dockerise and schedule
 
 
 # Use
-
+## Command Line Use
 ``` bash
 # If only generating locally
 python ./autoshift-scraper.py 
@@ -30,11 +29,42 @@ python ./autoshift-scraper.py --user GITHUB_USERNAME --repo GITHUB_REPOSITORY_NA
 python ./autoshift-scraper.py --schedule 5 # redeem every 5 hours
 ```
 
-## Setting up development environment
+## Docker Use
 
+The following docker environment variables are in use: 
 
+| Environment Variable | Use |
+| -------------------- | --- |
+| GITHUB_USER | The username that owns the GitHub repo to commit to | 
+| GITHUB_REPO | The name of the GitHub repository to commit to
+| GITHUB_TOKEN | The GitHub fine-grained personal access token -- see below for more details | 
+| PARSER_ARGS | (Optional) Additional parameters to pass in, like "--schedule 2 --verbose" |
 
-## Configuring GitHub connectivity
+Example: 
+``` bash
+docker run -d -t -i \
+-e GITHUB_USER='ugoogalizer' \ 
+-e GITHUB_REPO='autoshift-codes' \
+-e GITHUB_TOKEN='github_pat_***' \
+-e PARSER_ARGS='--verbose --schedule 2'+
+-v autoshift:/autoshift/data \
+--name autoshift-scraper \
+ugoogalizer/autoshift-scraper:latest
+```
+Example localhost build image: 
+``` bash
+docker run -d -t -i \
+-e GITHUB_USER='ugoogalizer' \
+-e GITHUB_REPO='autoshift-codes' \
+-e GITHUB_TOKEN='github_pat_***' \
+-e PARSER_ARGS='--verbose --schedule 2' \
+-v autoshift:/autoshift/data \
+--name autoshift-scraper \
+localhost/autoshift-scraper:latest
+
+```
+
+# Configuring GitHub connectivity
 
 Need to create a new fine-grained personal access token, with access to the only the destination repo and Read & Write access to "Contents"
 
@@ -43,6 +73,10 @@ The token should look something like
 ```
 github_pat_11p9ou8easrhsgp98sepfg97gUS98hu7ASFuASFDNOANSFDASF ... (but much longer)
 ```
+
+
+# Setting up development environment
+
 
 ## Original setup
 
@@ -57,3 +91,33 @@ pip install requests bs4 html5lib PyGithub APScheduler
 pip freeze > requirements.txt
 ```
 
+## Docker Container Image Build
+
+``` bash
+
+# Once off setup: 
+git clone TODO
+
+# Personal parameters
+export HARBORURL=harbor.test.com
+
+git pull
+
+#Set Build Parameters
+export VERSIONTAG=0.3
+
+#Build the Image
+docker build -t autoshift-scraper:latest -t autoshift-scraper:${VERSIONTAG} . 
+
+#Get the image name, it will be something like 41d81c9c2d99: 
+export IMAGE=$(docker images -q autoshift-scraper:latest)
+echo ${IMAGE}
+
+#Tag the image in harbor
+docker login ${HARBORURL}:443
+docker tag ${IMAGE} ${HARBORURL}:443/autoshift/autoshift-scraper:latest
+docker tag ${IMAGE} ${HARBORURL}:443/autoshift/autoshift-scraper:${VERSIONTAG}
+docker push ${HARBORURL}:443/autoshift/autoshift-scraper:latest
+docker push ${HARBORURL}:443/autoshift/autoshift-scraper:${VERSIONTAG}
+
+```
