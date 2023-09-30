@@ -179,11 +179,11 @@ def scrape_codes(webpage):
     return code_tables
 
 # Check to see if the new code existed in previous codes, and if so return the previous code's archive date.
-def getPreviousCodeArchived(new_code,previous_codes):
+def getPreviousCodeArchived(new_code,new_game,previous_codes):
     # Stupidly inefficient, but enough to keep previous dates
     for previous_code in previous_codes[0].get("codes"):
         #  print("COMPARING: " + new_code.get("code") + " with " + previous_code.get("code"))
-        if new_code.get("code") == previous_code.get("code") and new_code.get("game") == previous_code.get("game") :
+        if (new_code.get("code") == previous_code.get("code")) and (new_game == previous_code.get("game")) :
             _L.debug(" Code already existed, reverting archived datestamp")
             # Update the code in place
             #new_code.update(previous_code)
@@ -192,22 +192,16 @@ def getPreviousCodeArchived(new_code,previous_codes):
 
 # Restructure the normalised dictionary to the denormalised structure autoshift expects
 def generateAutoshiftJSON(website_code_tables, previous_codes): 
-
-        # for new_code in new_codes[0].get("codes"):
-        # print(new_code.get("code"))
-        # #if previous_code.get("code") in d for d in codes[0].get("codes"):
-        # if any(d['code'] == new_code.get("code") for d in previous_codes[0].get("codes")):
-        #     print("  Code existed previously, reverting timestamp")
-
     autoshiftcodes = []
     for code_tables in website_code_tables:
         for code_table in code_tables:
             for code in code_table.get("codes"):
-                # if any(d['code'] == code.get("code") for d in previous_codes[0].get("codes")):
-                #     timestamp = d['code'].get("achived")
-                
-                # archived = checkExistingKeyArchived(code,previous_codes) or code_table.get("archived")
-                archived = getPreviousCodeArchived(code,previous_codes) 
+
+                # Extract out the previous archived date if the key existed previously
+                archived = getPreviousCodeArchived(code,code_table.get("game"),previous_codes) 
+                if archived == None: 
+                    archived = code_table.get("archived")
+
 
                 if code_table.get("platform") == "pc":
                     autoshiftcodes.append({
@@ -241,11 +235,7 @@ def generateAutoshiftJSON(website_code_tables, previous_codes):
                         "expires": code.get("expires"),
                         "link": code_table.get("sourceURL")
                     })
-                    
-
-    # Sort the keys
-    # TODO
-
+  
     # Add the metadata section: 
     generatedDateAndTime = datetime.now(timezone.utc)
     metadata = {
@@ -303,36 +293,12 @@ def main(args):
 
     _L.info("Scraping Complete. Now writing out shiftcodes.json file")
 
-    # Read in the previous codes so we can retain timestamps
+    # Read in the previous codes so we can retain timestamps and know how many are new
     with open('shiftcodes.json', "rb") as f:
         previous_codes = json.loads(f.read())
 
     # Convert the normalised Dictionary into the denormalised autoshift structure
     codes = generateAutoshiftJSON(code_tables, previous_codes)
-
-
-
-        
-    # Keep prevous timestamps
-    ## DELEEEEEEEEEEEEETE MEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
-    ## DELEEEEEEEEEEEEETE MEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
-    ## DELEEEEEEEEEEEEETE MEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
-    ## DELEEEEEEEEEEEEETE MEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
-    ## DELEEEEEEEEEEEEETE MEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
-    #with open('shiftcodes-new.json', "rb") as f:
-    #    new_codes = json.loads(f.read())
-    
-    #print(json.dumps(previous_codes,indent=2, default=str))
-
-
-    # for new_code in new_codes[0].get("codes"):
-    #     print(new_code.get("code"))
-    #     #if previous_code.get("code") in d for d in codes[0].get("codes"):
-    #     if any(d['code'] == new_code.get("code") for d in previous_codes[0].get("codes")):
-    #         print("  Code existed previously, reverting timestamp")
-
-    # codes[0].get("codes").update()
-
 
     # Write out the file
     with open('shiftcodes.json', 'w') as write_file:
@@ -358,6 +324,7 @@ def main(args):
         _L.info("GitHub result: " + str(commit_return))
 
 if __name__ == '__main__':
+    import os
 
     # build argument parser
     parser = setup_argparser()
@@ -371,5 +338,33 @@ if __name__ == '__main__':
         _L.setLevel(DEBUG)
         _L.debug("Debug mode on")
 
-    # execute the main function
+    # execute the main function at least once (and only once if scheduler is not set)
     main(args)
+
+    if args.schedule and args.schedule < 2:
+        _L.warn(f"Running this tool every {args.schedule} hours would result in "
+                "too many requests.\n"
+                "Scheduling changed to run every 2 hours!")
+
+
+
+    # scheduling will start after first trigger (so in an hour..)
+    if args.schedule:
+        hours = int(args.schedule)
+        minutes = int((args.schedule-hours)*60+1e-5)
+        _L.info(f"Scheduling to run every {hours:02}:{minutes:02} hours")
+        from apscheduler.schedulers.blocking import BlockingScheduler
+        scheduler = BlockingScheduler()
+        # fire every 1h5m (to prevent being blocked by the shift platform.)
+        #  (5min safe margin because it somtimes fires a few seconds too early)
+        scheduler.add_job(main, "interval", args=(args,), hours=args.schedule)
+        print(f"Press Ctrl+{'Break' if os.name == 'nt' else 'C'} to exit")
+
+        try:
+            scheduler.start()
+        except (KeyboardInterrupt, SystemExit):
+            pass
+    else: 
+        # always execute at least once
+        main(args)
+    _L.info("Goodbye.")

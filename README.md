@@ -12,7 +12,7 @@ TODO List:
 - [x] Scrape mentalmars
 - [x] output into a autoshift compatible json file format
 - [ ] change to find `table` tags in `figure` tags to reduce noise in webpage
-- [ ] publish somewhere for consumption (github repo?) retaining sort order to make diffs easier
+- [x] publish to GitHub [here](https://raw.githubusercontent.com/ugoogalizer/autoshift-codes/main/shiftcodes.json)
 - [ ] dockerise and schedule
 
 
@@ -20,13 +20,29 @@ TODO List:
 # Use
 
 ``` bash
-python3 ./autoshift-scraper.py
+# If only generating locally
+python ./autoshift-scraper.py 
+
+# If pushing to GitHub:
+python ./autoshift-scraper.py --user GITHUB_USERNAME --repo GITHUB_REPOSITORY_NAME --token GITHUB_AUTHTOKEN
+
+# If scheduling: 
+python ./autoshift-scraper.py --schedule 5 # redeem every 5 hours
 ```
 
 ## Setting up development environment
 
 
 
+## Configuring GitHub connectivity
+
+Need to create a new fine-grained personal access token, with access to the only the destination repo and Read & Write access to "Contents"
+
+The token should look something like 
+
+```
+github_pat_11p9ou8easrhsgp98sepfg97gUS98hu7ASFuASFDNOANSFDASF ... (but much longer)
+```
 
 ## Original setup
 
@@ -36,7 +52,7 @@ python3 -m venv .venv
 source ./.venv/bin/activate
 
 # install packages
-pip install requests bs4 html5lib
+pip install requests bs4 html5lib PyGithub APScheduler
 
 pip freeze > requirements.txt
 ```
