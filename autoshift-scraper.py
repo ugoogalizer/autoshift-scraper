@@ -1,7 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
-import json
+import json, base64
 from datetime import datetime, timezone
+
+from github import Github
 
 from common import _L, DEBUG, DIRNAME, INFO
 # from typing import (Callable, ContextManager, Dict, Generic, Iterable,
@@ -176,13 +178,37 @@ def scrape_codes(webpage):
     _L.debug(json.dumps(code_tables,indent=2, default=str))
     return code_tables
 
+# Check to see if the new code existed in previous codes, and if so return the previous code's archive date.
+def getPreviousCodeArchived(new_code,previous_codes):
+    # Stupidly inefficient, but enough to keep previous dates
+    for previous_code in previous_codes[0].get("codes"):
+        #  print("COMPARING: " + new_code.get("code") + " with " + previous_code.get("code"))
+        if new_code.get("code") == previous_code.get("code") and new_code.get("game") == previous_code.get("game") :
+            _L.debug(" Code already existed, reverting archived datestamp")
+            # Update the code in place
+            #new_code.update(previous_code)
+            return previous_code.get("archived")
+    return None
 
 # Restructure the normalised dictionary to the denormalised structure autoshift expects
-def generateAutoshiftJSON(website_code_tables): 
+def generateAutoshiftJSON(website_code_tables, previous_codes): 
+
+        # for new_code in new_codes[0].get("codes"):
+        # print(new_code.get("code"))
+        # #if previous_code.get("code") in d for d in codes[0].get("codes"):
+        # if any(d['code'] == new_code.get("code") for d in previous_codes[0].get("codes")):
+        #     print("  Code existed previously, reverting timestamp")
+
     autoshiftcodes = []
     for code_tables in website_code_tables:
         for code_table in code_tables:
             for code in code_table.get("codes"):
+                # if any(d['code'] == code.get("code") for d in previous_codes[0].get("codes")):
+                #     timestamp = d['code'].get("achived")
+                
+                # archived = checkExistingKeyArchived(code,previous_codes) or code_table.get("archived")
+                archived = getPreviousCodeArchived(code,previous_codes) 
+
                 if code_table.get("platform") == "pc":
                     autoshiftcodes.append({
                         "code": code.get("code"),
@@ -190,7 +216,7 @@ def generateAutoshiftJSON(website_code_tables):
                         "game": code_table.get("game"),
                         "platform": "steam",
                         "reward": code.get("reward"),
-                        "archived": code_table.get("archived"),
+                        "archived": archived,
                         "expires": code.get("expires"),
                         "link": code_table.get("sourceURL")
                     })
@@ -200,7 +226,7 @@ def generateAutoshiftJSON(website_code_tables):
                         "game": code_table.get("game"),
                         "platform": "epic",
                         "reward": code.get("reward"),
-                        "archived": code_table.get("archived"),
+                        "archived": archived,
                         "expires": code.get("expires"),
                         "link": code_table.get("sourceURL")
                     })
@@ -211,10 +237,11 @@ def generateAutoshiftJSON(website_code_tables):
                         "game": code_table.get("game"),
                         "platform": code_table.get("platform"),
                         "reward": code.get("reward"),
-                        "archived": code_table.get("archived"),
+                        "archived": archived,
                         "expires": code.get("expires"),
                         "link": code_table.get("sourceURL")
                     })
+                    
 
     # Sort the keys
     # TODO
@@ -241,7 +268,6 @@ def generateAutoshiftJSON(website_code_tables):
 
 def setup_argparser():
     import argparse
-    import textwrap
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter)
@@ -252,7 +278,15 @@ def setup_argparser():
     parser.add_argument("-v", dest="verbose",
                         action="store_true",
                         help="Verbose mode")
-
+    parser.add_argument("-u", "--user",
+                        default=None,
+                        help=("GitHub Username that hosts the repo to push into"))
+    parser.add_argument("-r", "--repo",
+                        default=None,
+                        help=("GitHub Repository to push the shiftcodes into (i.e. autoshift-codes)"))
+    parser.add_argument("-t", "--token",
+                        default=None,
+                        help=("GitHub Authentication token to use "))
     return parser
 
 
@@ -263,19 +297,65 @@ def main(args):
 
     #Scrape the source webpage into a normalised Dictionary
     for webpage in webpages:
-        code_tables.append(scrape_codes(webpage))
+       code_tables.append(scrape_codes(webpage))
         
         #print(codes)
 
+    _L.info("Scraping Complete. Now writing out shiftcodes.json file")
+
+    # Read in the previous codes so we can retain timestamps
+    with open('shiftcodes.json', "rb") as f:
+        previous_codes = json.loads(f.read())
+
     # Convert the normalised Dictionary into the denormalised autoshift structure
-    codes = generateAutoshiftJSON(code_tables)
+    codes = generateAutoshiftJSON(code_tables, previous_codes)
+
+
+
+        
+    # Keep prevous timestamps
+    ## DELEEEEEEEEEEEEETE MEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+    ## DELEEEEEEEEEEEEETE MEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+    ## DELEEEEEEEEEEEEETE MEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+    ## DELEEEEEEEEEEEEETE MEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+    ## DELEEEEEEEEEEEEETE MEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+    #with open('shiftcodes-new.json', "rb") as f:
+    #    new_codes = json.loads(f.read())
+    
+    #print(json.dumps(previous_codes,indent=2, default=str))
+
+
+    # for new_code in new_codes[0].get("codes"):
+    #     print(new_code.get("code"))
+    #     #if previous_code.get("code") in d for d in codes[0].get("codes"):
+    #     if any(d['code'] == new_code.get("code") for d in previous_codes[0].get("codes")):
+    #         print("  Code existed previously, reverting timestamp")
+
+    # codes[0].get("codes").update()
+
 
     # Write out the file
     with open('shiftcodes.json', 'w') as write_file:
         json.dump(codes, write_file, indent=2, default=str)
 
-    # Commit and push to github
-    # TODO
+    # Commit the new file to GitHub publically if the args are set:
+    if (args.user and args.repo and args.token):
+        _L.info("Connecting to GitHub repo: " + args.user + "/" + args.repo)
+        # Connect to GitHub
+        file_path = "shiftcodes.json"
+        g = Github(args.token)
+        repo = g.get_repo(args.user + "/" + args.repo)
+
+        # Read in the latest file
+        _L.info("Read in shiftcodes file")
+        with open(file_path, "rb") as f:
+            file_to_commit = f.read()
+
+        # Push to GitHub:
+        _L.info("Push and Commit")
+        contents = repo.get_contents(file_path, ref="main")  # Retrieve old file to get its SHA and path
+        commit_return = repo.update_file(contents.path, "added new codes" , file_to_commit, contents.sha, branch="main", )  # Add, commit and push branch
+        _L.info("GitHub result: " + str(commit_return))
 
 if __name__ == '__main__':
 
