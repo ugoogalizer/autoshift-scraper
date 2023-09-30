@@ -2,12 +2,16 @@ import requests
 from bs4 import BeautifulSoup
 import json, base64
 from datetime import datetime, timezone
+from os import path, makedirs
+from pathlib import Path
 
 from github import Github
 
 from common import _L, DEBUG, DIRNAME, INFO
 # from typing import (Callable, ContextManager, Dict, Generic, Iterable,
 #                     Iterator, Optional, TypeVar)
+
+SHIFTCODESJSONPATH = 'data/shiftcodes.json'
 
 webpages= [{ 
         "game": "Borderlands: Game of the Year Edition", 
@@ -283,6 +287,11 @@ def setup_argparser():
 
 
 def main(args):
+
+    # Setup json output folder
+    makedirs(path.join(DIRNAME, "data"), exist_ok=True)
+    Path('data/shiftcodes.json').touch()
+
     #print(json.dumps(webpages,indent=2, default=str))
     codes = []
     code_tables = []
@@ -296,7 +305,7 @@ def main(args):
     _L.info("Scraping Complete. Now writing out shiftcodes.json file")
 
     # Read in the previous codes so we can retain timestamps and know how many are new
-    with open('shiftcodes.json', "rb") as f:
+    with open(SHIFTCODESJSONPATH, "rb") as f:
         previous_codes = json.loads(f.read())
 
     # Convert the normalised Dictionary into the denormalised autoshift structure
@@ -305,7 +314,7 @@ def main(args):
     _L.info("Found " + str(codes[0].get("meta").get("newcodecount")) + " new codes.")
 
     # Write out the file even if no new codes so we can track last scrape time
-    with open('shiftcodes.json', 'w') as write_file:
+    with open(SHIFTCODESJSONPATH, 'w') as write_file:
         json.dump(codes, write_file, indent=2, default=str)
 
     # Commit the new file to GitHub publically if the args are set:
@@ -314,7 +323,7 @@ def main(args):
         if codes[0].get("meta").get("newcodecount") > 0:
             _L.info("Connecting to GitHub repo: " + args.user + "/" + args.repo)
             # Connect to GitHub
-            file_path = "shiftcodes.json"
+            file_path = SHIFTCODESJSONPATH
             g = Github(args.token)
             repo = g.get_repo(args.user + "/" + args.repo)
 
