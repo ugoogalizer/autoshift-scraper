@@ -267,7 +267,7 @@ def setup_argparser():
     parser.add_argument("--schedule",
                         type=float, const=2, nargs="?",
                         help="Keep checking for keys and redeeming every hour")
-    parser.add_argument("-v", dest="verbose",
+    parser.add_argument("-v", "--verbose", dest="verbose",
                         action="store_true",
                         help="Verbose mode")
     parser.add_argument("-u", "--user",
@@ -344,6 +344,9 @@ if __name__ == '__main__':
         _L.setLevel(DEBUG)
         _L.debug("Debug mode on")
 
+    # execute the main function at least once (and only once if scheduler is not set)
+    main(args)
+
     if args.schedule and args.schedule < 2:
         _L.warn(f"Running this tool every {args.schedule} hours would result in "
                 "too many requests.\n"
@@ -363,7 +366,5 @@ if __name__ == '__main__':
             scheduler.start()
         except (KeyboardInterrupt, SystemExit):
             pass
-    else: 
-        # execute the main function at least once (and only once if scheduler is not set)
-        main(args)
+
     _L.info("Goodbye.")
