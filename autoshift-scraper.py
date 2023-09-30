@@ -185,11 +185,12 @@ def scrape_codes(webpage):
 # Check to see if the new code existed in previous codes, and if so return the previous code's archive date.
 def getPreviousCodeArchived(new_code,new_game,previous_codes):
     # Stupidly inefficient, but enough to keep previous dates
-    for previous_code in previous_codes[0].get("codes"):
-        #  print("COMPARING: " + new_code.get("code") + " with " + previous_code.get("code"))
-        if (new_code.get("code") == previous_code.get("code")) and (new_game == previous_code.get("game")) :
-            _L.debug(" Code already existed, reverting archived datestamp")
-            return previous_code.get("archived")
+    if previous_codes:
+        for previous_code in previous_codes[0].get("codes"):
+            #  print("COMPARING: " + new_code.get("code") + " with " + previous_code.get("code"))
+            if (new_code.get("code") == previous_code.get("code")) and (new_game == previous_code.get("game")) :
+                _L.debug(" Code already existed, reverting archived datestamp")
+                return previous_code.get("archived")
     return None
 
 # Restructure the normalised dictionary to the denormalised structure autoshift expects
@@ -306,7 +307,11 @@ def main(args):
 
     # Read in the previous codes so we can retain timestamps and know how many are new
     with open(SHIFTCODESJSONPATH, "rb") as f:
-        previous_codes = json.loads(f.read())
+        try:
+            previous_codes = json.loads(f.read())
+        except:
+            previous_codes = None
+            pass
 
     # Convert the normalised Dictionary into the denormalised autoshift structure
     codes = generateAutoshiftJSON(code_tables, previous_codes)
