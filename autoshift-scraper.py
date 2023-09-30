@@ -339,7 +339,7 @@ def main(args):
 
             # Push to GitHub:
             _L.info("Push and Commit")
-            contents = repo.get_contents(file_path, ref="main")  # Retrieve old file to get its SHA and path
+            contents = repo.get_contents('shiftcodes.json', ref="main")  # Retrieve old file to get its SHA and path
             commit_return = repo.update_file(contents.path, "added new codes" , file_to_commit, contents.sha, branch="main", )  # Add, commit and push branch
             _L.info("GitHub result: " + str(commit_return))
         else:
