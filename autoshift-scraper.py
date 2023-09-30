@@ -185,14 +185,13 @@ def getPreviousCodeArchived(new_code,new_game,previous_codes):
         #  print("COMPARING: " + new_code.get("code") + " with " + previous_code.get("code"))
         if (new_code.get("code") == previous_code.get("code")) and (new_game == previous_code.get("game")) :
             _L.debug(" Code already existed, reverting archived datestamp")
-            # Update the code in place
-            #new_code.update(previous_code)
             return previous_code.get("archived")
     return None
 
 # Restructure the normalised dictionary to the denormalised structure autoshift expects
 def generateAutoshiftJSON(website_code_tables, previous_codes): 
     autoshiftcodes = []
+    newcodecount = 0
     for code_tables in website_code_tables:
         for code_table in code_tables:
             for code in code_table.get("codes"):
@@ -200,8 +199,10 @@ def generateAutoshiftJSON(website_code_tables, previous_codes):
                 # Extract out the previous archived date if the key existed previously
                 archived = getPreviousCodeArchived(code,code_table.get("game"),previous_codes) 
                 if archived == None: 
+                    # New code
                     archived = code_table.get("archived")
-
+                    newcodecount+=1
+                    _L.info(" Found new code: " + code.get("code") + " " + code.get("reward") + " for " + code_table.get("game") + " on " + code_table.get("platform"))
 
                 if code_table.get("platform") == "pc":
                     autoshiftcodes.append({
@@ -245,7 +246,8 @@ def generateAutoshiftJSON(website_code_tables, previous_codes):
             "permalink": "https://raw.githubusercontent.com/ugoogalizer/autoshift/master/shiftcodes.json",
             "generated": {
                 "human": generatedDateAndTime
-            }
+            },
+            "newcodecount": newcodecount
         }
     
     autoshift = [{
@@ -300,28 +302,34 @@ def main(args):
     # Convert the normalised Dictionary into the denormalised autoshift structure
     codes = generateAutoshiftJSON(code_tables, previous_codes)
 
-    # Write out the file
+    _L.info("Found " + str(codes[0].get("meta").get("newcodecount")) + " new codes.")
+
+    # Write out the file even if no new codes so we can track last scrape time
     with open('shiftcodes.json', 'w') as write_file:
         json.dump(codes, write_file, indent=2, default=str)
 
     # Commit the new file to GitHub publically if the args are set:
     if (args.user and args.repo and args.token):
-        _L.info("Connecting to GitHub repo: " + args.user + "/" + args.repo)
-        # Connect to GitHub
-        file_path = "shiftcodes.json"
-        g = Github(args.token)
-        repo = g.get_repo(args.user + "/" + args.repo)
+        #Only commit if there are new codes
+        if codes[0].get("meta").get("newcodecount") > 0:
+            _L.info("Connecting to GitHub repo: " + args.user + "/" + args.repo)
+            # Connect to GitHub
+            file_path = "shiftcodes.json"
+            g = Github(args.token)
+            repo = g.get_repo(args.user + "/" + args.repo)
 
-        # Read in the latest file
-        _L.info("Read in shiftcodes file")
-        with open(file_path, "rb") as f:
-            file_to_commit = f.read()
+            # Read in the latest file
+            _L.info("Read in shiftcodes file")
+            with open(file_path, "rb") as f:
+                file_to_commit = f.read()
 
-        # Push to GitHub:
-        _L.info("Push and Commit")
-        contents = repo.get_contents(file_path, ref="main")  # Retrieve old file to get its SHA and path
-        commit_return = repo.update_file(contents.path, "added new codes" , file_to_commit, contents.sha, branch="main", )  # Add, commit and push branch
-        _L.info("GitHub result: " + str(commit_return))
+            # Push to GitHub:
+            _L.info("Push and Commit")
+            contents = repo.get_contents(file_path, ref="main")  # Retrieve old file to get its SHA and path
+            commit_return = repo.update_file(contents.path, "added new codes" , file_to_commit, contents.sha, branch="main", )  # Add, commit and push branch
+            _L.info("GitHub result: " + str(commit_return))
+        else:
+            _L.info("Not committing to GitHub as there are no new codes.")
 
 if __name__ == '__main__':
     import os
@@ -330,23 +338,16 @@ if __name__ == '__main__':
     parser = setup_argparser()
     args = parser.parse_args()
 
-    #args.pw = getattr(args, "pass")
-
     # Setup the logger
     _L.setLevel(INFO)
     if args.verbose:
         _L.setLevel(DEBUG)
         _L.debug("Debug mode on")
 
-    # execute the main function at least once (and only once if scheduler is not set)
-    main(args)
-
     if args.schedule and args.schedule < 2:
         _L.warn(f"Running this tool every {args.schedule} hours would result in "
                 "too many requests.\n"
                 "Scheduling changed to run every 2 hours!")
-
-
 
     # scheduling will start after first trigger (so in an hour..)
     if args.schedule:
@@ -355,8 +356,6 @@ if __name__ == '__main__':
         _L.info(f"Scheduling to run every {hours:02}:{minutes:02} hours")
         from apscheduler.schedulers.blocking import BlockingScheduler
         scheduler = BlockingScheduler()
-        # fire every 1h5m (to prevent being blocked by the shift platform.)
-        #  (5min safe margin because it somtimes fires a few seconds too early)
         scheduler.add_job(main, "interval", args=(args,), hours=args.schedule)
         print(f"Press Ctrl+{'Break' if os.name == 'nt' else 'C'} to exit")
 
@@ -365,6 +364,6 @@ if __name__ == '__main__':
         except (KeyboardInterrupt, SystemExit):
             pass
     else: 
-        # always execute at least once
+        # execute the main function at least once (and only once if scheduler is not set)
         main(args)
     _L.info("Goodbye.")
