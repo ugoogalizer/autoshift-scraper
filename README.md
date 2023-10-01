@@ -4,9 +4,15 @@
 Script aimed at scraping SHiFT Codes from websites, initially focused at those hosted on https://mentalmars.com, such as: 
  - https://mentalmars.com/game-news/borderlands-3-golden-keys/
 
-Instead of publishing this as part of [Fabbi's autoshift](https://github.com/Fabbi/autoshift), this is aimed at publishing a machine readable file that can be hit by autoshift.  This reduces the load on mentalmars as it's likely not ok to have swarms of autoshifts scraping their website.
+Instead of publishing this as part of [Fabbi's autoshift](https://github.com/Fabbi/autoshift), this is aimed at publishing a machine readable file that can be hit by autoshift.  This reduces the load on mentalmars as it's likely not ok to have swarms of autoshifts scraping their website.  Instead codes are published to the repo here: 
+ - https://github.com/ugoogalizer/autoshift-codes
+With a direct link here: 
+ - https://raw.githubusercontent.com/ugoogalizer/autoshift-codes/main/shiftcodes.json
 
-This has been setup with the intent that other webpages could be scraped. The  Python Dictionary `webpages` can be used to customise the webpage, the tables and their contents. This may need adjusting as mentalmars' website updates over time also
+
+## Intent 
+
+This script has been setup with the intent that other webpages could be scraped. The Python Dictionary `webpages` can be used to customise the webpage, the tables and their contents. This may need adjusting as mentalmars' website updates over time.
 
 TODO List: 
 - [x] Scrape mentalmars
