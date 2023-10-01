@@ -14,6 +14,8 @@ TODO List:
 - [ ] change to find `table` tags in `figure` tags to reduce noise in webpage
 - [x] publish to GitHub [here](https://raw.githubusercontent.com/ugoogalizer/autoshift-codes/main/shiftcodes.json)
 - [x] dockerise and schedule
+- [ ] identify expired codes on website (strikethrough)
+- [ ] identify expired codes by date
 
 
 # Use
@@ -64,6 +66,87 @@ localhost/autoshift-scraper:latest
 
 ```
 
+## Kubernetes Use
+
+Example Deployment file
+
+``` yaml
+
+--- # deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: autoshift-scraper
+  name: autoshift-scraper
+#  namespace: autoshift
+spec:
+  selector:
+    matchLabels:
+      app: autoshift-scraper
+  revisionHistoryLimit: 0
+  template:
+    metadata:
+      labels:
+        app: autoshift-scraper
+    spec:
+      containers:
+        - name: autoshift-scraper
+          # Fix version so it doesn't auto-update
+          image: ugoogalizer/autoshift-scraper:0.6
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: GITHUB_USER
+              value: "ugoogalizer"
+            - name: GITHUB_REPO
+              value: "autoshift-codes"
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: autoshift-scraper-secret
+                  key: githubtoken
+            - name: PARSER_ARGS
+              value: "--schedule 2"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+            limits:
+              cpu: "100m"
+              memory: "500Mi"
+          volumeMounts:
+            - mountPath: /autoshift-scraper/data
+              name: autoshift-scraper-pv
+      volumes:
+        - name: autoshift-scraper-pv
+          # If this is NFS backed, you may have to add the nolock mount option to the storage class
+          persistentVolumeClaim:
+            claimName: autoshift-scraper-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+# If this is NFS backed, you may have to add the nolock mount option to the storage class
+metadata:
+  name: autoshift-scraper-pvc
+#  namespace: autoshift
+spec:
+  storageClassName: managed-nfs-storage-retain
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Mi
+
+
+# kubectl create namespace autoshift
+# kubectl config set-context --current --namespace=autoshift
+# kubectl create secret generic autoshift-scraper-secret --from-literal=githubtoken='XXX' 
+
+# To get the username and password use: 
+# kubectl get secret autoshift-scraper-secret -o jsonpath="{.data.githubtoken}" | base64 -d
+
+```
+
 # Configuring GitHub connectivity
 
 Need to create a new fine-grained personal access token, with access to the only the destination repo and Read & Write access to "Contents"
@@ -104,7 +187,7 @@ export HARBORURL=harbor.test.com
 git pull
 
 #Set Build Parameters
-export VERSIONTAG=0.3
+export VERSIONTAG=0.6
 
 #Build the Image
 docker build -t autoshift-scraper:latest -t autoshift-scraper:${VERSIONTAG} . 
@@ -113,7 +196,7 @@ docker build -t autoshift-scraper:latest -t autoshift-scraper:${VERSIONTAG} .
 export IMAGE=$(docker images -q autoshift-scraper:latest)
 echo ${IMAGE}
 
-#Tag the image in harbor
+#Tag and Push the image in harbor
 docker login ${HARBORURL}:443
 docker tag ${IMAGE} ${HARBORURL}:443/autoshift/autoshift-scraper:latest
 docker tag ${IMAGE} ${HARBORURL}:443/autoshift/autoshift-scraper:${VERSIONTAG}

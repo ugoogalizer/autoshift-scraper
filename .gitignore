@@ -130,6 +130,6 @@ notebooks/
 *.code-workspace
 
 # autoshift specifics
-# data
+data
 *new.json
 *old.json
