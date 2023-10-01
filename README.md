@@ -202,11 +202,20 @@ docker build -t autoshift-scraper:latest -t autoshift-scraper:${VERSIONTAG} .
 export IMAGE=$(docker images -q autoshift-scraper:latest)
 echo ${IMAGE}
 
-#Tag and Push the image in harbor
+#Tag and Push the image into local harbor
 docker login ${HARBORURL}:443
 docker tag ${IMAGE} ${HARBORURL}:443/autoshift/autoshift-scraper:latest
 docker tag ${IMAGE} ${HARBORURL}:443/autoshift/autoshift-scraper:${VERSIONTAG}
 docker push ${HARBORURL}:443/autoshift/autoshift-scraper:latest
 docker push ${HARBORURL}:443/autoshift/autoshift-scraper:${VERSIONTAG}
+
+#Tag and Push the image to public docker hub repo
+docker login -u ugoogalizer docker.io/ugoogalizer/autoshift-scraper
+docker tag ${IMAGE} docker.io/ugoogalizer/autoshift-scraper:latest
+docker tag ${IMAGE} docker.io/ugoogalizer/autoshift-scraper:${VERSIONTAG}
+docker push docker.io/ugoogalizer/autoshift-scraper:latest
+docker push docker.io/ugoogalizer/autoshift-scraper:${VERSIONTAG}
+
+ugoogalizer/autoshift-scraper
 
 ```
