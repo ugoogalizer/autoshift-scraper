@@ -8,8 +8,6 @@ from pathlib import Path
 from github import Github
 
 from common import _L, DEBUG, DIRNAME, INFO
-# from typing import (Callable, ContextManager, Dict, Generic, Iterable,
-#                     Iterator, Optional, TypeVar)
 
 SHIFTCODESJSONPATH = 'data/shiftcodes.json'
 
@@ -76,9 +74,6 @@ webpages= [{
             ]
     }]
 
-#BL2 = ["universal-expirable", "universal-unexpirable","pc","xbox","Playstation","universal-event"]
-
-
 def remap_dict_keys(dict_keys):
     # List of table headings to be mapped to standard values
     # Here in case of variation in table headings
@@ -86,9 +81,9 @@ def remap_dict_keys(dict_keys):
         'SHiFT Code': 'code',
         'PC SHiFT Code': 'code',
         'Expires': 'expires', 
+        'Expiration Date' :'expires',
         'Reward': 'reward'
     }
-
     return dict((heading_map[key], dict_keys[key]) if key in heading_map else (key, value) for key, value in dict_keys.items())
 
 
@@ -105,6 +100,13 @@ def cleanse_codes(codes):
             clean_code.update({"expires" : clean_code.get("expires").replace('Expires: ', '')})
         else:
             clean_code.update({"expires" : "Unknown"})
+
+        # Mark expired as expired
+        if "expired" in clean_code: 
+            clean_code.update({"expired" : True})
+        else:
+            clean_code.update({"expired" : False})
+            
 
         # convert expiries to dates
         # TODO 
@@ -138,7 +140,7 @@ def scrape_codes(webpage):
     for figure in figures: 
         _L.info (" Parsing for table #" + str(table_count) + " - " + webpage.get("platform_ordered_tables")[table_count])
 
-        #Don't parse any tables  marked to  discard
+        #Don't parse any tables marked to discard
         if webpage.get("platform_ordered_tables")[table_count] == "discard":
             table_count+=1
             continue
@@ -151,7 +153,8 @@ def scrape_codes(webpage):
         # Convert the HTML table into a Python Dict: 
         # Tip from: https://stackoverflow.com/questions/11901846/beautifulsoup-a-dictionary-from-an-html-table
         table_header = [header.text for header in table_html.find_all('th')]
-        code_table = [{table_header[i]: cell.text for i, cell in enumerate(row.find_all('td'))}
+        table_header.append("expired") # expired codes have a strikethrough ('s') tag and are found last
+        code_table = [{table_header[i]: cell.text for i, cell in enumerate(row.find_all({'td','s'}))}
                 for row in table_html.find('tbody').find_all('tr')]
 
         # If we find more tables on the webpage than we were expecting, error
@@ -194,12 +197,16 @@ def getPreviousCodeArchived(new_code,new_game,previous_codes):
     return None
 
 # Restructure the normalised dictionary to the denormalised structure autoshift expects
-def generateAutoshiftJSON(website_code_tables, previous_codes): 
+def generateAutoshiftJSON(website_code_tables, previous_codes, include_expired): 
     autoshiftcodes = []
     newcodecount = 0
     for code_tables in website_code_tables:
         for code_table in code_tables:
             for code in code_table.get("codes"):
+
+                # Skip the code if its expired and we're not to include expired
+                if not include_expired and code.get("expired"):
+                    continue
 
                 # Extract out the previous archived date if the key existed previously
                 archived = getPreviousCodeArchived(code,code_table.get("game"),previous_codes) 
@@ -218,6 +225,7 @@ def generateAutoshiftJSON(website_code_tables, previous_codes):
                         "reward": code.get("reward"),
                         "archived": archived,
                         "expires": code.get("expires"),
+                        "expired": code.get("expired"),
                         "link": code_table.get("sourceURL")
                     })
                     autoshiftcodes.append({
@@ -228,6 +236,7 @@ def generateAutoshiftJSON(website_code_tables, previous_codes):
                         "reward": code.get("reward"),
                         "archived": archived,
                         "expires": code.get("expires"),
+                        "expired": code.get("expired"),
                         "link": code_table.get("sourceURL")
                     })
                 else:
@@ -239,6 +248,7 @@ def generateAutoshiftJSON(website_code_tables, previous_codes):
                         "reward": code.get("reward"),
                         "archived": archived,
                         "expires": code.get("expires"),
+                        "expired": code.get("expired"),
                         "link": code_table.get("sourceURL")
                     })
   
@@ -294,7 +304,8 @@ def main(args):
     Path('data/shiftcodes.json').touch()
 
     #print(json.dumps(webpages,indent=2, default=str))
-    codes = []
+    codes_inc_expired = []
+    codes_excl_expired = []
     code_tables = []
 
     #Scrape the source webpage into a normalised Dictionary
@@ -314,18 +325,19 @@ def main(args):
             pass
 
     # Convert the normalised Dictionary into the denormalised autoshift structure
-    codes = generateAutoshiftJSON(code_tables, previous_codes)
+    codes_inc_expired = generateAutoshiftJSON(code_tables, previous_codes, True)
+    codes_excl_expired = generateAutoshiftJSON(code_tables, previous_codes, False)
 
-    _L.info("Found " + str(codes[0].get("meta").get("newcodecount")) + " new codes.")
+    _L.info("Found " + str(codes_inc_expired[0].get("meta").get("newcodecount")) + " new codes.")
 
     # Write out the file even if no new codes so we can track last scrape time
     with open(SHIFTCODESJSONPATH, 'w') as write_file:
-        json.dump(codes, write_file, indent=2, default=str)
+        json.dump(codes_inc_expired, write_file, indent=2, default=str)
 
     # Commit the new file to GitHub publically if the args are set:
     if (args.user and args.repo and args.token):
         #Only commit if there are new codes
-        if codes[0].get("meta").get("newcodecount") > 0:
+        if codes_inc_expired[0].get("meta").get("newcodecount") > 0:
             _L.info("Connecting to GitHub repo: " + args.user + "/" + args.repo)
             # Connect to GitHub
             file_path = SHIFTCODESJSONPATH
