@@ -20,7 +20,7 @@ TODO List:
 - [ ] change to find `table` tags in `figure` tags to reduce noise in webpage
 - [x] publish to GitHub [here](https://raw.githubusercontent.com/ugoogalizer/autoshift-codes/main/shiftcodes.json)
 - [x] dockerise and schedule
-- [ ] identify expired codes on website (strikethrough)
+- [x] identify expired codes on website (strikethrough)
 - [ ] identify expired codes by date
 
 
