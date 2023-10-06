@@ -216,6 +216,4 @@ docker tag ${IMAGE} docker.io/ugoogalizer/autoshift-scraper:${VERSIONTAG}
 docker push docker.io/ugoogalizer/autoshift-scraper:latest
 docker push docker.io/ugoogalizer/autoshift-scraper:${VERSIONTAG}
 
-ugoogalizer/autoshift-scraper
-
 ```
