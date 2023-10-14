@@ -1,8 +1,12 @@
 
 
 # Overview
-Script aimed at scraping SHiFT Codes from websites, initially focused at those hosted on https://mentalmars.com, such as: 
- - https://mentalmars.com/game-news/borderlands-3-golden-keys/
+Script aimed at scraping SHiFT Codes from websites, currently all provided from the great work done at  https://mentalmars.com.  Current webpages scraped include: 
+- [Borderlands](https://mentalmars.com/game-news/borderlands-golden-keys/)
+- [Borderlands 2](https://mentalmars.com/game-news/borderlands-2-golden-keys/)
+- [Borderlands 3](https://mentalmars.com/game-news/borderlands-3-golden-keys/)
+- [Borderlands The Pre-Sequel](https://mentalmars.com/game-news/bltps-golden-keys/)
+- [Tiny Tina's Wonderlands](https://mentalmars.com/game-news/tiny-tinas-wonderlands-shift-codes)
 
 Instead of publishing this as part of [Fabbi's autoshift](https://github.com/Fabbi/autoshift), this is aimed at publishing a machine readable file that can be hit by autoshift.  This reduces the load on mentalmars as it's likely not ok to have swarms of autoshifts scraping their website.  Instead codes are published to the repo here: 
  - https://github.com/ugoogalizer/autoshift-codes
