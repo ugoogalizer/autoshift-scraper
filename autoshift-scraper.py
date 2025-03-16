@@ -16,12 +16,14 @@ webpages= [{
         "sourceURL": "https://mentalmars.com/game-news/borderlands-golden-keys/",
         "platform_ordered_tables": [
                 "universal",
+                "universal",
                 "universal"
             ]
     },{ 
         "game": "Borderlands 2", 
         "sourceURL": "https://mentalmars.com/game-news/borderlands-2-golden-keys/",
         "platform_ordered_tables": [
+                "universal",
                 "universal",
                 "universal",
                 "pc",
@@ -35,7 +37,7 @@ webpages= [{
         "sourceURL": "https://mentalmars.com/game-news/borderlands-3-golden-keys/",
         "platform_ordered_tables": [
                 "universal",
-                "discard",
+                "universal",
                 "universal",
                 "universal",
                 "universal",
@@ -48,6 +50,7 @@ webpages= [{
         "game": "Borderlands The Pre-Sequel", 
         "sourceURL": "https://mentalmars.com/game-news/bltps-golden-keys/",
         "platform_ordered_tables": [
+                "universal",
                 "universal",
                 "universal",
                 "pc",
@@ -69,6 +72,7 @@ webpages= [{
         "game": "Tiny Tina's Wonderlands", 
         "sourceURL": "https://mentalmars.com/game-news/tiny-tinas-wonderlands-shift-codes/",
         "platform_ordered_tables": [
+                "universal",
                 "universal",
                 "universal"
             ]
