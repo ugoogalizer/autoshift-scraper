@@ -33,6 +33,23 @@ webpages= [{
                 "discard"
             ]
     },{ 
+        "game": "Borderlands 2", 
+        "sourceURL": "https://mentalmars.com/game-news/borderlands-2-assault-on-dragon-keep-head-skins/",
+        "platform_ordered_tables": [
+                "pc",
+                "xbox",
+                "Playstation",
+                "pc",
+                "xbox",
+                "Playstation"
+            ]
+    },{ 
+        "game": "Borderlands 2", 
+        "sourceURL": "https://mentalmars.com/game-news/get-borderlands-2-luck-zafords-shift-codes/",
+        "platform_ordered_tables": [
+                "universal"
+            ]
+    },{ 
         "game": "Borderlands 3", 
         "sourceURL": "https://mentalmars.com/game-news/borderlands-3-golden-keys/",
         "platform_ordered_tables": [
@@ -211,6 +228,33 @@ def generateAutoshiftJSON(website_code_tables, previous_codes, include_expired):
                 # Skip the code if its expired and we're not to include expired
                 if not include_expired and code.get("expired"):
                     continue
+
+
+                #Restructure to account for the added special pages
+                    #Zafords Skins
+                if (code_table.get("sourceURL") == "https://mentalmars.com/game-news/get-borderlands-2-luck-zafords-shift-codes/"):
+                    if code.get("Platform") in {"Xbox 360", "Classic PC", "PlayStation 3"}:
+                        continue
+                    code_table['platform'] = 'universal'
+                    code.pop('Platform', None)
+                    code['reward'] = 'Luck of the Zafords Skins'
+                    if (code.get("code")) == None:
+                        for key in code.keys():
+                            if "SHiFT" in key:
+                                code['code'] = code.pop(key)
+                                break
+
+                    #Tiny Tina Assault Skins
+                if (code_table.get("sourceURL") == "https://mentalmars.com/game-news/borderlands-2-assault-on-dragon-keep-head-skins/"):
+                    if code.get("Head"):
+                        code['reward'] = code.pop('Head')
+                    if code.get("Skin"):
+                        code['reward'] = code.pop('Skin')
+                    if (code.get("code")) == None:
+                        for key in code.keys():
+                            if "SHiFT" in key:
+                                code['code'] = code.pop(key)
+                                break
 
                 # Extract out the previous archived date if the key existed previously
                 archived = getPreviousCodeArchived(code,code_table.get("game"),previous_codes) 
