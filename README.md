@@ -59,7 +59,7 @@ docker run -d -t -i \
 -e GITHUB_USER='ugoogalizer' \ 
 -e GITHUB_REPO='autoshift-codes' \
 -e GITHUB_TOKEN='github_pat_***' \
--e PARSER_ARGS='--verbose --schedule 2'+
+-e PARSER_ARGS='--verbose --schedule 2' \
 -v autoshift:/autoshift/data \
 --name autoshift-scraper \
 zacharmstrong/autoshift-scraper:latest
@@ -67,7 +67,7 @@ zacharmstrong/autoshift-scraper:latest
 Example localhost build image: 
 ``` bash
 docker run -d -t -i \
--e GITHUB_USER='ugoogalizer' \
+-e GITHUB_USER='zacharmstrong' \
 -e GITHUB_REPO='autoshift-codes' \
 -e GITHUB_TOKEN='github_pat_***' \
 -e PARSER_ARGS='--verbose --schedule 2' \
@@ -103,12 +103,11 @@ spec:
     spec:
       containers:
         - name: autoshift-scraper
-          # Fix version so it doesn't auto-update
-          image: ugoogalizer/autoshift-scraper:0.6
+          image: zacharmstrong/autoshift-scraper:latest
           imagePullPolicy: IfNotPresent
           env:
             - name: GITHUB_USER
-              value: "ugoogalizer"
+              value: "zarmstrong"
             - name: GITHUB_REPO
               value: "autoshift-codes"
             - name: GITHUB_TOKEN
