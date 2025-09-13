@@ -93,16 +93,29 @@ webpages= [{
                 "universal",
                 "universal"
             ]
+    },{ 
+        "game": "Borderlands 4", 
+        "sourceURL": "https://mentalmars.com/game-news/borderlands-4-shift-codes/",
+        "platform_ordered_tables": [
+                "universal"
+            ]
     }]
 
 def remap_dict_keys(dict_keys):
     # List of table headings to be mapped to standard values
     # Here in case of variation in table headings
     heading_map = {
+        'Borderlands 4 SHiFT Code': 'code',
+        'PC SHiFT Code': 'code',
+        'Xbox SHiFT Code': 'code',
+        'Playstation SHiFT Code': 'code',
         'SHiFT Code': 'code',
         'PC SHiFT Code': 'code',
+        'Luck of the Zafords SHiFT Codes': 'code',
         'Expires': 'expires', 
         'Expiration Date' :'expires',
+        'Head': 'reward',
+        'Skin': 'reward',
         'Reward': 'reward'
     }
     return dict((heading_map[key], dict_keys[key]) if key in heading_map else (key, value) for key, value in dict_keys.items())
@@ -229,6 +242,9 @@ def generateAutoshiftJSON(website_code_tables, previous_codes, include_expired):
                 if not include_expired and code.get("expired"):
                     continue
 
+                #Skiip code if it isn't 29 characters(standard length)
+                if len(code.get('code')) != 29:
+                    continue
 
                 #Restructure to account for the added special pages
                     #Zafords Skins
@@ -244,17 +260,6 @@ def generateAutoshiftJSON(website_code_tables, previous_codes, include_expired):
                                 code['code'] = code.pop(key)
                                 break
 
-                    #Tiny Tina Assault Skins
-                if (code_table.get("sourceURL") == "https://mentalmars.com/game-news/borderlands-2-assault-on-dragon-keep-head-skins/"):
-                    if code.get("Head"):
-                        code['reward'] = code.pop('Head')
-                    if code.get("Skin"):
-                        code['reward'] = code.pop('Skin')
-                    if (code.get("code")) == None:
-                        for key in code.keys():
-                            if "SHiFT" in key:
-                                code['code'] = code.pop(key)
-                                break
 
                 # Extract out the previous archived date if the key existed previously
                 archived = getPreviousCodeArchived(code,code_table.get("game"),previous_codes) 
