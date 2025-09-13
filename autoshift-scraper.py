@@ -16,12 +16,14 @@ webpages= [{
         "sourceURL": "https://mentalmars.com/game-news/borderlands-golden-keys/",
         "platform_ordered_tables": [
                 "universal",
+                "universal",
                 "universal"
             ]
     },{ 
         "game": "Borderlands 2", 
         "sourceURL": "https://mentalmars.com/game-news/borderlands-2-golden-keys/",
         "platform_ordered_tables": [
+                "universal",
                 "universal",
                 "universal",
                 "pc",
@@ -31,11 +33,28 @@ webpages= [{
                 "discard"
             ]
     },{ 
+        "game": "Borderlands 2", 
+        "sourceURL": "https://mentalmars.com/game-news/borderlands-2-assault-on-dragon-keep-head-skins/",
+        "platform_ordered_tables": [
+                "pc",
+                "xbox",
+                "Playstation",
+                "pc",
+                "xbox",
+                "Playstation"
+            ]
+    },{ 
+        "game": "Borderlands 2", 
+        "sourceURL": "https://mentalmars.com/game-news/get-borderlands-2-luck-zafords-shift-codes/",
+        "platform_ordered_tables": [
+                "universal"
+            ]
+    },{ 
         "game": "Borderlands 3", 
         "sourceURL": "https://mentalmars.com/game-news/borderlands-3-golden-keys/",
         "platform_ordered_tables": [
                 "universal",
-                "discard",
+                "universal",
                 "universal",
                 "universal",
                 "universal",
@@ -48,6 +67,7 @@ webpages= [{
         "game": "Borderlands The Pre-Sequel", 
         "sourceURL": "https://mentalmars.com/game-news/bltps-golden-keys/",
         "platform_ordered_tables": [
+                "universal",
                 "universal",
                 "universal",
                 "pc",
@@ -70,6 +90,13 @@ webpages= [{
         "sourceURL": "https://mentalmars.com/game-news/tiny-tinas-wonderlands-shift-codes/",
         "platform_ordered_tables": [
                 "universal",
+                "universal",
+                "universal"
+            ]
+    },{ 
+        "game": "Borderlands 4", 
+        "sourceURL": "https://mentalmars.com/game-news/borderlands-4-shift-codes/",
+        "platform_ordered_tables": [
                 "universal"
             ]
     }]
@@ -78,10 +105,17 @@ def remap_dict_keys(dict_keys):
     # List of table headings to be mapped to standard values
     # Here in case of variation in table headings
     heading_map = {
+        'Borderlands 4 SHiFT Code': 'code',
+        'PC SHiFT Code': 'code',
+        'Xbox SHiFT Code': 'code',
+        'Playstation SHiFT Code': 'code',
         'SHiFT Code': 'code',
         'PC SHiFT Code': 'code',
+        'Luck of the Zafords SHiFT Codes': 'code',
         'Expires': 'expires', 
         'Expiration Date' :'expires',
+        'Head': 'reward',
+        'Skin': 'reward',
         'Reward': 'reward'
     }
     return dict((heading_map[key], dict_keys[key]) if key in heading_map else (key, value) for key, value in dict_keys.items())
@@ -208,6 +242,25 @@ def generateAutoshiftJSON(website_code_tables, previous_codes, include_expired):
                 if not include_expired and code.get("expired"):
                     continue
 
+                #Skiip code if it isn't 29 characters(standard length)
+                if len(code.get('code')) != 29:
+                    continue
+
+                #Restructure to account for the added special pages
+                    #Zafords Skins
+                if (code_table.get("sourceURL") == "https://mentalmars.com/game-news/get-borderlands-2-luck-zafords-shift-codes/"):
+                    if code.get("Platform") in {"Xbox 360", "Classic PC", "PlayStation 3"}:
+                        continue
+                    code_table['platform'] = 'universal'
+                    code.pop('Platform', None)
+                    code['reward'] = 'Luck of the Zafords Skins'
+                    if (code.get("code")) == None:
+                        for key in code.keys():
+                            if "SHiFT" in key:
+                                code['code'] = code.pop(key)
+                                break
+
+
                 # Extract out the previous archived date if the key existed previously
                 archived = getPreviousCodeArchived(code,code_table.get("game"),previous_codes) 
                 if archived == None: 
@@ -258,7 +311,7 @@ def generateAutoshiftJSON(website_code_tables, previous_codes, include_expired):
             "version": "0.1",
             "description": "GitHub Alternate Source for Shift Codes",
             "attribution": "Data provided by https://mentalmars.com",
-            "permalink": "https://raw.githubusercontent.com/ugoogalizer/autoshift/master/shiftcodes.json",
+            "permalink": "https://raw.githubusercontent.com/DankestMemeLord/autoshift-codes/refs/heads/main/shiftcodes.json",
             "generated": {
                 "human": generatedDateAndTime
             },
