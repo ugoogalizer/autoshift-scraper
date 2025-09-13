@@ -12,9 +12,16 @@ from common import _L, DEBUG, DIRNAME, INFO
 SHIFTCODESJSONPATH = 'data/shiftcodes.json'
 
 webpages= [{ 
+        "game": "Borderlands 4", 
+        "sourceURL": "https://mentalmars.com/game-news/borderlands-4-shift-codes/",
+        "platform_ordered_tables": [
+                "universal"
+            ]
+    },{ 
         "game": "Borderlands: Game of the Year Edition", 
         "sourceURL": "https://mentalmars.com/game-news/borderlands-golden-keys/",
         "platform_ordered_tables": [
+                "universal",
                 "universal",
                 "universal"
             ]
@@ -22,6 +29,7 @@ webpages= [{
         "game": "Borderlands 2", 
         "sourceURL": "https://mentalmars.com/game-news/borderlands-2-golden-keys/",
         "platform_ordered_tables": [
+                "universal",
                 "universal",
                 "universal",
                 "pc",
@@ -63,6 +71,7 @@ webpages= [{
                 "discard",
                 "discard",
                 "discard",
+                "discard",
                 "discard"
             ]
     },{ 
@@ -70,12 +79,6 @@ webpages= [{
         "sourceURL": "https://mentalmars.com/game-news/tiny-tinas-wonderlands-shift-codes/",
         "platform_ordered_tables": [
                 "universal",
-                "universal"
-            ]
-    },{ 
-        "game": "Borderlands 4", 
-        "sourceURL": "https://mentalmars.com/game-news/borderlands-4-shift-codes/",
-        "platform_ordered_tables": [
                 "universal",
                 "universal"
             ]
@@ -84,16 +87,29 @@ webpages= [{
     ]
 
 def remap_dict_keys(dict_keys):
-    # List of table headings to be mapped to standard values
-    # Here in case of variation in table headings
-    heading_map = {
-        'SHiFT Code': 'code',
-        'PC SHiFT Code': 'code',
-        'Expires': 'expires', 
-        'Expiration Date' :'expires',
-        'Reward': 'reward'
-    }
-    return dict((heading_map[key], dict_keys[key]) if key in heading_map else (key, value) for key, value in dict_keys.items())
+    # Map a variety of possible table heading variations to a small set of
+    # canonical keys. This is intentionally fuzzy: many pages prefix the
+    # heading with the game name (e.g. 'Borderlands 4 SHiFT Code') or use
+    # slightly different wording like 'Expire Date'. Match case-insensitively
+    # using substring checks so we don't miss these variants.
+    mapped = {}
+    for key, value in dict_keys.items():
+        if key is None:
+            continue
+        k = key.strip().lower()
+        if 'shift code' in k or 'shift' in k and 'code' in k:
+            new_key = 'code'
+        elif 'expire' in k:
+            new_key = 'expires'
+        elif 'reward' in k:
+            new_key = 'reward'
+        else:
+            # preserve the original heading if it doesn't match any known
+            # canonical field — downstream code will either handle it or
+            # ignore it.
+            new_key = key
+        mapped[new_key] = value
+    return mapped
 
 
 # convert headings to standard headings
@@ -147,6 +163,11 @@ def scrape_codes(webpage):
 
     table_count=0
     for figure in figures: 
+        # Prevent IndexError if there are more figures than expected
+        if table_count >= len(webpage.get("platform_ordered_tables")):
+            _L.warn(f"More tables found ({len(figures)}) than expected ({len(webpage.get('platform_ordered_tables'))}) for {webpage.get('game')}. Skipping extra tables.")
+            break
+
         _L.info (" Parsing for table #" + str(table_count) + " - " + webpage.get("platform_ordered_tables")[table_count])
 
         #Don't parse any tables marked to discard
@@ -181,6 +202,7 @@ def scrape_codes(webpage):
             "platform" : webpage.get("platform_ordered_tables")[table_count], 
             "sourceURL" : webpage.get("sourceURL"),
             "archived" : scrapedDateAndTime,
+            "raw_table_html": str(table_html),
             "codes" : code_table
         })
 
@@ -223,7 +245,27 @@ def generateAutoshiftJSON(website_code_tables, previous_codes, include_expired):
                     # New code
                     archived = code_table.get("archived")
                     newcodecount+=1
-                    _L.info(" Found new code: " + code.get("code") + " " + code.get("reward") + " for " + code_table.get("game") + " on " + code_table.get("platform"))
+                    # If any critical fields are missing, capture context for debugging and continue
+                    if code.get("code") is None or code.get("reward") is None:
+                        _L.error("Parsed code row missing fields for game=%s platform=%s: %s", code_table.get("game"), code_table.get("platform"), code)
+                        # write debugging info to a file for inspection
+                        try:
+                            debug_record = {
+                                "game": code_table.get("game"),
+                                "platform": code_table.get("platform"),
+                                "sourceURL": code_table.get("sourceURL"),
+                                "archived": str(code_table.get("archived")),
+                                "row": code
+                            }
+                            makedirs(path.join(DIRNAME, "data"), exist_ok=True)
+                            fn = path.join(DIRNAME, "data", "debug_problem_rows.json")
+                            # append JSON objects one per line so it's easy to inspect
+                            with open(fn, "a") as df:
+                                df.write(json.dumps(debug_record, default=str) + "\n")
+                        except Exception as e:
+                            _L.error("Failed to write debug file: %s", e)
+                    # Use logger formatting (avoids concatenation when values may be None)
+                    _L.info(" Found new code: %s %s for %s on %s", code.get("code"), code.get("reward"), code_table.get("game"), code_table.get("platform"))
 
                 if code_table.get("platform") == "pc":
                     autoshiftcodes.append({
