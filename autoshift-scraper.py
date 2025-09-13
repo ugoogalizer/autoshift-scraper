@@ -72,7 +72,16 @@ webpages= [{
                 "universal",
                 "universal"
             ]
-    }]
+    },{ 
+        "game": "Borderlands 4", 
+        "sourceURL": "https://mentalmars.com/game-news/borderlands-4-shift-codes/",
+        "platform_ordered_tables": [
+                "universal",
+                "universal"
+            ]
+    }
+    
+    ]
 
 def remap_dict_keys(dict_keys):
     # List of table headings to be mapped to standard values
@@ -258,7 +267,7 @@ def generateAutoshiftJSON(website_code_tables, previous_codes, include_expired):
             "version": "0.1",
             "description": "GitHub Alternate Source for Shift Codes",
             "attribution": "Data provided by https://mentalmars.com",
-            "permalink": "https://raw.githubusercontent.com/ugoogalizer/autoshift/master/shiftcodes.json",
+            "permalink": "https://raw.githubusercontent.com/zarmstrong/autoshift-codes/main/shiftcodes.json",
             "generated": {
                 "human": generatedDateAndTime
             },
