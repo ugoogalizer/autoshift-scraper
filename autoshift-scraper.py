@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import json, base64
+import re
 from datetime import datetime, timezone
 from os import path, makedirs
 from pathlib import Path
@@ -234,6 +235,22 @@ def generateAutoshiftJSON(website_code_tables, previous_codes, include_expired):
     for code_tables in website_code_tables:
         for code_table in code_tables:
             for code in code_table.get("codes"):
+
+                # Validate and normalize the code field: only accept codes that
+                # match five groups of five alphanumeric characters separated by
+                # hyphens (e.g. AAAAA-BBBBB-CCCCC-DDDDD-EEEEE). Anything else
+                # should be excluded from the output.
+                raw_code = code.get("code")
+                if raw_code:
+                    raw_code = raw_code.strip().upper()
+                else:
+                    raw_code = None
+
+                code_pattern = re.compile(r'^[A-Z0-9]{5}(?:-[A-Z0-9]{5}){4}$')
+                if not raw_code or not code_pattern.fullmatch(raw_code):
+                    _L.debug("Skipping non-matching shift code for %s on %s: %s", code_table.get("game"), code_table.get("platform"), raw_code)
+                    # skip rows that do not contain a valid code
+                    continue
 
                 # Skip the code if its expired and we're not to include expired
                 if not include_expired and code.get("expired"):
