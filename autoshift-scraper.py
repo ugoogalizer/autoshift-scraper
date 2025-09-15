@@ -341,6 +341,74 @@ def generateAutoshiftJSON(website_code_tables, previous_codes, include_expired):
     return autoshift   
     #return json.dumps(autoshiftcodes,indent=2, default=str)
 
+
+def run_migrations_on_shiftfile(shiftfile_path, previous_codes):
+    """Run migrations against the loaded shiftcodes structure.
+
+    Currently implements:
+      - v1 -> v2: remove any codes that don't match the 5x5 groups pattern.
+
+    Returns the (possibly modified) previous_codes structure.
+    """
+    if not previous_codes:
+        return previous_codes
+
+    try:
+        meta = previous_codes[0].get('meta', {})
+    except Exception:
+        return previous_codes
+
+    # If no version is set at all, initialise to version 1 and persist that
+    if 'version' not in meta:
+        _L.info("Initial migration: setting shiftcodes file version to 1")
+        previous_codes[0].setdefault('meta', {})['version'] = 1
+        try:
+            with open(shiftfile_path, 'w') as f:
+                json.dump(previous_codes, f, indent=2, default=str)
+            _L.info("Wrote initial version=1 to %s", shiftfile_path)
+        except Exception as e:
+            _L.error("Failed to write initial-version shiftcodes file: %s", e)
+        meta = previous_codes[0].get('meta', {})
+
+    version = meta.get('version', 1)
+    # if already >= 2 nothing to do
+    if version >= 2:
+        _L.debug("Shiftcodes file already at version %s, no migrations needed", version)
+        return previous_codes
+
+    # Migration: v1 -> v2
+    if version == 1:
+        _L.info("Running migration: v1 -> v2 on %s", shiftfile_path)
+        # Only allow codes that match the 5x5 pattern
+        pattern = re.compile(r'^[A-Z0-9]{5}(?:-[A-Z0-9]{5}){4}$')
+        codes = previous_codes[0].get('codes', [])
+        before_count = len(codes)
+        filtered = []
+        for c in codes:
+            code_val = c.get('code')
+            if code_val:
+                code_val = str(code_val).strip().upper()
+            if code_val and pattern.fullmatch(code_val):
+                # keep original entry but normalise stored code to upper/stripped
+                c['code'] = code_val
+                filtered.append(c)
+            else:
+                _L.debug("Migration: dropping invalid code entry: %s", c)
+
+        removed = before_count - len(filtered)
+        previous_codes[0]['codes'] = filtered
+        previous_codes[0].setdefault('meta', {})['version'] = 2
+
+        # Persist the migrated file back to disk
+        try:
+            with open(shiftfile_path, 'w') as f:
+                json.dump(previous_codes, f, indent=2, default=str)
+            _L.info("Migration complete: removed %d invalid codes, set version to 2", removed)
+        except Exception as e:
+            _L.error("Failed to write migrated shiftcodes file: %s", e)
+
+    return previous_codes
+
 def setup_argparser():
     import argparse
 
