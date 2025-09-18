@@ -72,6 +72,12 @@ webpages= [{
                 "universal",
                 "universal"
             ]
+    },{ 
+        "game": "Borderlands 4", 
+        "sourceURL": "https://mentalmars.com/game-news/borderlands-4-shift-codes/",
+        "platform_ordered_tables": [
+                "universal"
+            ]
     }]
 
 def remap_dict_keys(dict_keys):
@@ -80,8 +86,10 @@ def remap_dict_keys(dict_keys):
     heading_map = {
         'SHiFT Code': 'code',
         'PC SHiFT Code': 'code',
+        'Borderlands 4 SHiFT Code': 'code',
         'Expires': 'expires', 
         'Expiration Date' :'expires',
+        'Expire Date': 'expires',
         'Reward': 'reward'
     }
     return dict((heading_map[key], dict_keys[key]) if key in heading_map else (key, value) for key, value in dict_keys.items())
@@ -138,6 +146,11 @@ def scrape_codes(webpage):
 
     table_count=0
     for figure in figures: 
+        # Check if we have more tables than expected
+        if table_count >= len(webpage.get("platform_ordered_tables")):
+            _L.warning(f" Found more tables ({len(figures)}) than expected ({len(webpage.get('platform_ordered_tables'))}). Skipping extra tables.")
+            break
+            
         _L.info (" Parsing for table #" + str(table_count) + " - " + webpage.get("platform_ordered_tables")[table_count])
 
         #Don't parse any tables marked to discard
@@ -208,13 +221,17 @@ def generateAutoshiftJSON(website_code_tables, previous_codes, include_expired):
                 if not include_expired and code.get("expired"):
                     continue
 
+                # Skip codes that don't have a valid code field or are placeholders
+                if not code.get("code") or code.get("code").strip() == "" or code.get("code").strip().lower() in ["coming soon", "..."]:
+                    continue
+                    
                 # Extract out the previous archived date if the key existed previously
                 archived = getPreviousCodeArchived(code,code_table.get("game"),previous_codes) 
                 if archived == None: 
                     # New code
                     archived = code_table.get("archived")
                     newcodecount+=1
-                    _L.info(" Found new code: " + code.get("code") + " " + code.get("reward") + " for " + code_table.get("game") + " on " + code_table.get("platform"))
+                    _L.info(" Found new code: " + code.get("code") + " " + str(code.get("reward", "Unknown")) + " for " + code_table.get("game") + " on " + code_table.get("platform"))
 
                 if code_table.get("platform") == "pc":
                     autoshiftcodes.append({
