@@ -5,6 +5,7 @@ Script aimed at scraping SHiFT Codes from websites, currently all provided from 
 - [Borderlands](https://mentalmars.com/game-news/borderlands-golden-keys/)
 - [Borderlands 2](https://mentalmars.com/game-news/borderlands-2-golden-keys/)
 - [Borderlands 3](https://mentalmars.com/game-news/borderlands-3-golden-keys/)
+- [Borderlands 4](https://mentalmars.com/game-news/borderlands-4-shift-codes/)
 - [Borderlands The Pre-Sequel](https://mentalmars.com/game-news/bltps-golden-keys/)
 - [Tiny Tina's Wonderlands](https://mentalmars.com/game-news/tiny-tinas-wonderlands-shift-codes)
 
@@ -58,15 +59,15 @@ docker run -d -t -i \
 -e GITHUB_USER='ugoogalizer' \ 
 -e GITHUB_REPO='autoshift-codes' \
 -e GITHUB_TOKEN='github_pat_***' \
--e PARSER_ARGS='--verbose --schedule 2'+
+-e PARSER_ARGS='--verbose --schedule 2' \
 -v autoshift:/autoshift/data \
 --name autoshift-scraper \
-ugoogalizer/autoshift-scraper:latest
+zacharmstrong/autoshift-scraper:latest
 ```
 Example localhost build image: 
 ``` bash
 docker run -d -t -i \
--e GITHUB_USER='ugoogalizer' \
+-e GITHUB_USER='zacharmstrong' \
 -e GITHUB_REPO='autoshift-codes' \
 -e GITHUB_TOKEN='github_pat_***' \
 -e PARSER_ARGS='--verbose --schedule 2' \
@@ -102,12 +103,11 @@ spec:
     spec:
       containers:
         - name: autoshift-scraper
-          # Fix version so it doesn't auto-update
-          image: ugoogalizer/autoshift-scraper:0.6
+          image: zacharmstrong/autoshift-scraper:latest
           imagePullPolicy: IfNotPresent
           env:
             - name: GITHUB_USER
-              value: "ugoogalizer"
+              value: "zarmstrong"
             - name: GITHUB_REPO
               value: "autoshift-codes"
             - name: GITHUB_TOKEN

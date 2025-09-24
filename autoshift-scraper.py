@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import json, base64
+import re
 from datetime import datetime, timezone
 from os import path, makedirs
 from pathlib import Path
@@ -12,9 +13,16 @@ from common import _L, DEBUG, DIRNAME, INFO
 SHIFTCODESJSONPATH = 'data/shiftcodes.json'
 
 webpages= [{ 
+        "game": "Borderlands 4", 
+        "sourceURL": "https://mentalmars.com/game-news/borderlands-4-shift-codes/",
+        "platform_ordered_tables": [
+                "universal"
+            ]
+    },{ 
         "game": "Borderlands: Game of the Year Edition", 
         "sourceURL": "https://mentalmars.com/game-news/borderlands-golden-keys/",
         "platform_ordered_tables": [
+                "universal",
                 "universal",
                 "universal"
             ]
@@ -22,6 +30,7 @@ webpages= [{
         "game": "Borderlands 2", 
         "sourceURL": "https://mentalmars.com/game-news/borderlands-2-golden-keys/",
         "platform_ordered_tables": [
+                "universal",
                 "universal",
                 "universal",
                 "pc",
@@ -63,6 +72,7 @@ webpages= [{
                 "discard",
                 "discard",
                 "discard",
+                "discard",
                 "discard"
             ]
     },{ 
@@ -70,21 +80,37 @@ webpages= [{
         "sourceURL": "https://mentalmars.com/game-news/tiny-tinas-wonderlands-shift-codes/",
         "platform_ordered_tables": [
                 "universal",
+                "universal",
                 "universal"
             ]
-    }]
+    }
+    
+    ]
 
 def remap_dict_keys(dict_keys):
-    # List of table headings to be mapped to standard values
-    # Here in case of variation in table headings
-    heading_map = {
-        'SHiFT Code': 'code',
-        'PC SHiFT Code': 'code',
-        'Expires': 'expires', 
-        'Expiration Date' :'expires',
-        'Reward': 'reward'
-    }
-    return dict((heading_map[key], dict_keys[key]) if key in heading_map else (key, value) for key, value in dict_keys.items())
+    # Map a variety of possible table heading variations to a small set of
+    # canonical keys. This is intentionally fuzzy: many pages prefix the
+    # heading with the game name (e.g. 'Borderlands 4 SHiFT Code') or use
+    # slightly different wording like 'Expire Date'. Match case-insensitively
+    # using substring checks so we don't miss these variants.
+    mapped = {}
+    for key, value in dict_keys.items():
+        if key is None:
+            continue
+        k = key.strip().lower()
+        if 'shift code' in k or 'shift' in k and 'code' in k:
+            new_key = 'code'
+        elif 'expire' in k:
+            new_key = 'expires'
+        elif 'reward' in k:
+            new_key = 'reward'
+        else:
+            # preserve the original heading if it doesn't match any known
+            # canonical field — downstream code will either handle it or
+            # ignore it.
+            new_key = key
+        mapped[new_key] = value
+    return mapped
 
 
 # convert headings to standard headings
@@ -138,6 +164,11 @@ def scrape_codes(webpage):
 
     table_count=0
     for figure in figures: 
+        # Prevent IndexError if there are more figures than expected
+        if table_count >= len(webpage.get("platform_ordered_tables")):
+            _L.warn(f"More tables found ({len(figures)}) than expected ({len(webpage.get('platform_ordered_tables'))}) for {webpage.get('game')}. Skipping extra tables.")
+            break
+
         _L.info (" Parsing for table #" + str(table_count) + " - " + webpage.get("platform_ordered_tables")[table_count])
 
         #Don't parse any tables marked to discard
@@ -172,6 +203,7 @@ def scrape_codes(webpage):
             "platform" : webpage.get("platform_ordered_tables")[table_count], 
             "sourceURL" : webpage.get("sourceURL"),
             "archived" : scrapedDateAndTime,
+            "raw_table_html": str(table_html),
             "codes" : code_table
         })
 
@@ -204,6 +236,22 @@ def generateAutoshiftJSON(website_code_tables, previous_codes, include_expired):
         for code_table in code_tables:
             for code in code_table.get("codes"):
 
+                # Validate and normalize the code field: only accept codes that
+                # match five groups of five alphanumeric characters separated by
+                # hyphens (e.g. AAAAA-BBBBB-CCCCC-DDDDD-EEEEE). Anything else
+                # should be excluded from the output.
+                raw_code = code.get("code")
+                if raw_code:
+                    raw_code = raw_code.strip().upper()
+                else:
+                    raw_code = None
+
+                code_pattern = re.compile(r'^[A-Z0-9]{5}(?:-[A-Z0-9]{5}){4}$')
+                if not raw_code or not code_pattern.fullmatch(raw_code):
+                    _L.debug("Skipping non-matching shift code for %s on %s: %s", code_table.get("game"), code_table.get("platform"), raw_code)
+                    # skip rows that do not contain a valid code
+                    continue
+
                 # Skip the code if its expired and we're not to include expired
                 if not include_expired and code.get("expired"):
                     continue
@@ -214,7 +262,27 @@ def generateAutoshiftJSON(website_code_tables, previous_codes, include_expired):
                     # New code
                     archived = code_table.get("archived")
                     newcodecount+=1
-                    _L.info(" Found new code: " + code.get("code") + " " + code.get("reward") + " for " + code_table.get("game") + " on " + code_table.get("platform"))
+                    # If any critical fields are missing, capture context for debugging and continue
+                    if code.get("code") is None or code.get("reward") is None:
+                        _L.error("Parsed code row missing fields for game=%s platform=%s: %s", code_table.get("game"), code_table.get("platform"), code)
+                        # write debugging info to a file for inspection
+                        try:
+                            debug_record = {
+                                "game": code_table.get("game"),
+                                "platform": code_table.get("platform"),
+                                "sourceURL": code_table.get("sourceURL"),
+                                "archived": str(code_table.get("archived")),
+                                "row": code
+                            }
+                            makedirs(path.join(DIRNAME, "data"), exist_ok=True)
+                            fn = path.join(DIRNAME, "data", "debug_problem_rows.json")
+                            # append JSON objects one per line so it's easy to inspect
+                            with open(fn, "a") as df:
+                                df.write(json.dumps(debug_record, default=str) + "\n")
+                        except Exception as e:
+                            _L.error("Failed to write debug file: %s", e)
+                    # Use logger formatting (avoids concatenation when values may be None)
+                    _L.info(" Found new code: %s %s for %s on %s", code.get("code"), code.get("reward"), code_table.get("game"), code_table.get("platform"))
 
                 if code_table.get("platform") == "pc":
                     autoshiftcodes.append({
@@ -258,7 +326,7 @@ def generateAutoshiftJSON(website_code_tables, previous_codes, include_expired):
             "version": "0.1",
             "description": "GitHub Alternate Source for Shift Codes",
             "attribution": "Data provided by https://mentalmars.com",
-            "permalink": "https://raw.githubusercontent.com/ugoogalizer/autoshift/master/shiftcodes.json",
+            "permalink": "https://raw.githubusercontent.com/zarmstrong/autoshift-codes/main/shiftcodes.json",
             "generated": {
                 "human": generatedDateAndTime
             },
@@ -272,6 +340,74 @@ def generateAutoshiftJSON(website_code_tables, previous_codes, include_expired):
     
     return autoshift   
     #return json.dumps(autoshiftcodes,indent=2, default=str)
+
+
+def run_migrations_on_shiftfile(shiftfile_path, previous_codes):
+    """Run migrations against the loaded shiftcodes structure.
+
+    Currently implements:
+      - v1 -> v2: remove any codes that don't match the 5x5 groups pattern.
+
+    Returns the (possibly modified) previous_codes structure.
+    """
+    if not previous_codes:
+        return previous_codes
+
+    try:
+        meta = previous_codes[0].get('meta', {})
+    except Exception:
+        return previous_codes
+
+    # If no version is set at all, initialise to version 1 and persist that
+    if 'version' not in meta:
+        _L.info("Initial migration: setting shiftcodes file version to 1")
+        previous_codes[0].setdefault('meta', {})['version'] = 1
+        try:
+            with open(shiftfile_path, 'w') as f:
+                json.dump(previous_codes, f, indent=2, default=str)
+            _L.info("Wrote initial version=1 to %s", shiftfile_path)
+        except Exception as e:
+            _L.error("Failed to write initial-version shiftcodes file: %s", e)
+        meta = previous_codes[0].get('meta', {})
+
+    version = meta.get('version', 1)
+    # if already >= 2 nothing to do
+    if version >= 2:
+        _L.debug("Shiftcodes file already at version %s, no migrations needed", version)
+        return previous_codes
+
+    # Migration: v1 -> v2
+    if version == 1:
+        _L.info("Running migration: v1 -> v2 on %s", shiftfile_path)
+        # Only allow codes that match the 5x5 pattern
+        pattern = re.compile(r'^[A-Z0-9]{5}(?:-[A-Z0-9]{5}){4}$')
+        codes = previous_codes[0].get('codes', [])
+        before_count = len(codes)
+        filtered = []
+        for c in codes:
+            code_val = c.get('code')
+            if code_val:
+                code_val = str(code_val).strip().upper()
+            if code_val and pattern.fullmatch(code_val):
+                # keep original entry but normalise stored code to upper/stripped
+                c['code'] = code_val
+                filtered.append(c)
+            else:
+                _L.debug("Migration: dropping invalid code entry: %s", c)
+
+        removed = before_count - len(filtered)
+        previous_codes[0]['codes'] = filtered
+        previous_codes[0].setdefault('meta', {})['version'] = 2
+
+        # Persist the migrated file back to disk
+        try:
+            with open(shiftfile_path, 'w') as f:
+                json.dump(previous_codes, f, indent=2, default=str)
+            _L.info("Migration complete: removed %d invalid codes, set version to 2", removed)
+        except Exception as e:
+            _L.error("Failed to write migrated shiftcodes file: %s", e)
+
+    return previous_codes
 
 def setup_argparser():
     import argparse
