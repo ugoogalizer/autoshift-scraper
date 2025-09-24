@@ -326,7 +326,7 @@ def generateAutoshiftJSON(website_code_tables, previous_codes, include_expired):
             "version": "0.1",
             "description": "GitHub Alternate Source for Shift Codes",
             "attribution": "Data provided by https://mentalmars.com",
-            "permalink": "https://raw.githubusercontent.com/zarmstrong/autoshift-codes/main/shiftcodes.json",
+            "permalink": "https://raw.githubusercontent.com/ugoogalizer/autoshift-codes/main/shiftcodes.json",
             "generated": {
                 "human": generatedDateAndTime
             },
