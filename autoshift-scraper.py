@@ -16,7 +16,8 @@ webpages= [{
         "game": "Borderlands 4", 
         "sourceURL": "https://mentalmars.com/game-news/borderlands-4-shift-codes/",
         "platform_ordered_tables": [
-                "universal"
+                "universal",
+                "discard"
             ]
     },{ 
         "game": "Borderlands: Game of the Year Edition", 
@@ -44,7 +45,7 @@ webpages= [{
         "sourceURL": "https://mentalmars.com/game-news/borderlands-3-golden-keys/",
         "platform_ordered_tables": [
                 "universal",
-                "discard",
+                "universal",
                 "universal",
                 "universal",
                 "universal",
@@ -57,6 +58,7 @@ webpages= [{
         "game": "Borderlands The Pre-Sequel", 
         "sourceURL": "https://mentalmars.com/game-news/bltps-golden-keys/",
         "platform_ordered_tables": [
+                "universal",
                 "universal",
                 "universal",
                 "pc",
@@ -80,7 +82,7 @@ webpages= [{
         "sourceURL": "https://mentalmars.com/game-news/tiny-tinas-wonderlands-shift-codes/",
         "platform_ordered_tables": [
                 "universal",
-                "universal",
+                "universal", 
                 "universal"
             ]
     }
