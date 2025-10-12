@@ -17,6 +17,8 @@ webpages= [{
         "sourceURL": "https://mentalmars.com/game-news/borderlands-4-shift-codes/",
         "platform_ordered_tables": [
                 "universal",
+                "universal",
+                "universal",
                 "discard"
             ]
     },{ 
